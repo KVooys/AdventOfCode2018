@@ -56,41 +56,104 @@ What is the size of the largest area that isn't infinite?
 
 """
 
-from collections import defaultdict
-import pprint
+from collections import defaultdict, Counter
+from PIL import Image, ImageFilter
+import random
+import math
+
+
+def input_to_vars(lines):
+    coord_map = defaultdict(tuple)
+    max_x, max_y = 0, 0
+    count = 0
+    for line in lines:
+        x, y = map(int, line.strip().split(", "))
+        if x > max_x:
+            max_x = x
+        if y > max_y:
+            max_y = y
+        coord_map[count] = (x, y)
+        count += 1
+    return coord_map, max_x, max_y
+
+
+# this is wrong, but was fun to make! Vonoroi diagram (which is not Manhattan unfortunately)
+def generate_voronoi_diagram(width, height, coords):
+    colours = defaultdict(int)
+    image = Image.new("RGB", (width, height))
+    putpixel = image.putpixel
+    imgx, imgy = image.size
+    nx = []
+    ny = []
+    nr = []
+    ng = []
+    nb = []
+    for k, v in coords.items():
+        nx.append(v[0])
+        ny.append(v[1])
+        nr.append(random.randrange(1, 256))
+        ng.append(random.randrange(1, 256))
+        nb.append(random.randrange(1, 256))
+    for y in range(imgy):
+        for x in range(imgx):
+            # mark the initial points in black
+            if (x, y) in coords.values():
+                putpixel((x, y), (0, 0, 0))
+            else:
+                dmin = math.hypot(imgx - 1, imgy - 1)
+                j = -1
+                for i in range(len(coords)):
+                    d = math.hypot(nx[i] - x, ny[i] - y)
+                    if d < dmin:
+                        dmin = d
+                        j = i
+                putpixel((x, y), (nr[j], ng[j], nb[j]))
+
+    image.save("VoronoiDiagram.png", "PNG")
+
+
+def generate_manhattan_distances(width, height, coords):
+    nearest = {}
+    imgx, imgy = width, height
+
+    for y in range(imgy):
+        for x in range(imgx):
+            xy = (x, y)
+            dist = []
+            for c in coords.values():
+                # calculate mh dist to each coord and append to the dist_dict
+                manhattan = abs((c[0] - x) + (c[1] - y))
+                dist.append((c, manhattan))
+            # check to which coord this pixel has the least mh dist, and whether there's only one of those.
+            min_dist = min(d[1] for d in dist)
+            found = list(filter(lambda d: d[1] == min_dist, dist))
+            # if that's the case, append it to a dict to count with.
+            # TODO: Figure out which ones go on infinitely somehow.
+            if len(found) == 1:
+                nearest[xy] = found[0][0]
+            else:
+                nearest[xy] = None
+    counter = Counter(nearest.values())
+    print(counter.most_common())
+
 
 with open("inputs/day6.txt", "r") as file:
     lines = file.readlines()
 
 
-coord_map = defaultdict(list)
-max_x, max_y = 0, 0
-count = 0
-for line in lines:
-    x, y = map(int, line.strip().split(", "))
-    if x > max_x:
-        max_x = x
-    if y > max_y:
-        max_y = y
-    coord_map[count] = [x, y]
-    count += 1
+coords, width, height = input_to_vars(lines)
+# print(coords, width, height)
+generate_voronoi_diagram(width, height, coords)
+# generate_manhattan_distances(width, height, coords)
 
-# TODO: find nearest coords (Manhattan distance) for each point in the coord_map
+
+# find nearest coords (Manhattan distance) for each point in the coord_map
 # Pseudo code:
 # for every point on the grid (which is size max_x, max_y)
-# calculate Manhattan distance to X nearby points (how many? only for points +/- 0.5 * max_x and max_y)
-# store shortest dist per point on the grid somehow, like a defaultdict(int)
-# use 0 if distance is the same to two or more points
+# calculate Manhattan distance to other points
+# store shortest dist per point on the grid somehow, in a counter for instance
+# don't count if distance to two or more points is the same
 
 # No need to search for the distance to the points that are farthest outside
 # as they will extend infinitely in some way or another
-# Optional: Write them to a CSV file to make a nice map view for funsies
-# Example:
-# # Write csv full of dots
-# with open("day6test.csv", "w") as output:
-#     for y in range(max_y):
-#         base_line = (max_x * ".," + "\n")
-#         output.write(base_line)
-
-
-
+# However, I don't know yet how to determine which ones this involves.
