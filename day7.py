@@ -78,6 +78,7 @@ With 5 workers and the 60+ second step durations described above, how long will 
 """
 
 from collections import defaultdict
+from string import ascii_uppercase
 
 with open("inputs/day7.txt", "r") as file:
     lines = file.readlines()
@@ -94,10 +95,30 @@ for line in lines:
     total_steps.add(words[1])
     total_steps.add(words[7])
 
+# Part 2 code
+# Precalculate the worktime per letter (A-Z = 1-26 in example of part 2 or 61-86 in part 2)
+# the workers describe 2 things: the worktime left and which letter they are working on
+worktime_per_letter = {i: (ascii_uppercase.index(i) + 1) for i in ascii_uppercase}
+workers = {1: [0, ""], 2: [0, ""]}
+
+
+# When a point is to be removed, add it to a worker if that worker is available
+def check_work_queue(letter):
+    for k, v in workers.items():
+        # code to assign worker to workitem
+        if v[1] is None:
+            v[1], v[0] = letter, worktime_per_letter[letter]
+            # TODO: substract 1 from worktime per loop, make worker available again when reached 0
+            # TODO: integrate in letter removal process
+
+
 # main loop
 # logic: keep looping over the steps while there are still steps to be set
 points_to_remove = []
+count = 0
 while len(total_steps) > 0:
+    # keep track of loop count for part 2
+    count += 1
     print("Looping on ", total_steps)
     print("Requirements: ", reqs.items())
     # if a char has no requirements at all, it's eligible for removal
@@ -127,3 +148,4 @@ while len(total_steps) > 0:
     points_to_remove.remove(removed_letter)
 
 print(solved_order)
+print(count)
