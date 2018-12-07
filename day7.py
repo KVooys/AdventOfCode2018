@@ -41,71 +41,89 @@ So, in this example, the correct order is CABDFE.
 
 In what order should the steps in your instructions be completed?
 
+
+--- Part Two ---
+
+As you're about to begin construction, four of the Elves offer to help. "The sun will set soon; it'll go faster if we work together." Now, you need to account for multiple people working on steps simultaneously. If multiple steps are available, workers should still begin them in alphabetical order.
+
+Each step takes 60 seconds plus an amount corresponding to its letter: A=1, B=2, C=3, and so on. So, step A takes 60+1=61 seconds, while step Z takes 60+26=86 seconds. No time is required between steps.
+
+To simplify things for the example, however, suppose you only have help from one Elf (a total of two workers) and that each step takes 60 fewer seconds (so that step A takes 1 second and step Z takes 26 seconds). Then, using the same instructions as above, this is how each second would be spent:
+
+Second   Worker 1   Worker 2   Done
+   0        C          .
+   1        C          .
+   2        C          .
+   3        A          F       C
+   4        B          F       CA
+   5        B          F       CA
+   6        D          F       CAB
+   7        D          F       CAB
+   8        D          F       CAB
+   9        D          .       CABF
+  10        E          .       CABFD
+  11        E          .       CABFD
+  12        E          .       CABFD
+  13        E          .       CABFD
+  14        E          .       CABFD
+  15        .          .       CABFDE
+
+Each row represents one second of time. The Second column identifies how many seconds have passed as of the beginning of that second. Each worker column shows the step that worker is currently doing (or . if they are idle). The Done column shows completed steps.
+
+Note that the order of the steps has changed; this is because steps now take time to finish and multiple workers can begin multiple steps simultaneously.
+
+In this example, it would take 15 seconds for two workers to complete these steps.
+
+With 5 workers and the 60+ second step durations described above, how long will it take to complete all of the steps?
 """
 
-    from collections import defaultdict
+from collections import defaultdict
 
-    with open("inputs/day7.txt", "r") as file:
-        lines = file.readlines()
+with open("inputs/day7.txt", "r") as file:
+    lines = file.readlines()
 
-    # small requirements document in dict form:
-    # before X can begin: do ABC --> formatted as {X: [A,B,C]}
-    # Words[7] is the step, words[1] the requirement of that step
-    reqs = defaultdict(list)
-    total_steps = set()
-    solved_order = ""
+# Words[7] is the step, words[1] the requirement of that step
+# before step X can begin: do ABC --> formatted as {X: [A,B,C]}
+reqs = defaultdict(list)
+total_steps = set()
+solved_order = ""
 
-    for line in lines:
-        words = line.split()
-        reqs[words[7]].append(words[1])
-        total_steps.add(words[1])
-        total_steps.add(words[7])
+for line in lines:
+    words = line.split()
+    reqs[words[7]].append(words[1])
+    total_steps.add(words[1])
+    total_steps.add(words[7])
 
-    # if an item has no dependencies, it will not be in the dict, but it will be in the total_steps
-    # That is the starting point (or a list of starting points).
-    print("Removing starting points")
-    starting_points = []
+# main loop
+# logic: keep looping over the steps while there are still steps to be set
+points_to_remove = []
+while len(total_steps) > 0:
+    print("Looping on ", total_steps)
+    print("Requirements: ", reqs.items())
+    # if a char has no requirements at all, it's eligible for removal
     for char in total_steps:
-        if char not in reqs.keys():
-            starting_points += char
-    # Remove the starting points in alph order from the total_steps and add them to the solved_order.
-    starting_points.sort()
-    for s in starting_points:
-        total_steps.remove(s)
-        solved_order += s
-        # since the requirement is solved, remove it from any requirements
-        for v in reqs.values():
-            if s in v:
-                v.remove(s)
-    print(starting_points)
+        if char not in reqs.keys() and char not in points_to_remove:
+            points_to_remove.append(char)
+    for k, v in reqs.items():
+        # if the char's requirements are met, the value in the dict will be an empty list
+        if len(v) == 0 and k not in points_to_remove:
+            points_to_remove.append(k)
+    for p in points_to_remove:
+        if p in reqs:
+            reqs.pop(p)
 
+    # remove the first in alph order from the total_steps and add them to the solved_order
+    points_to_remove.sort()
+    print("Eligible for removal ", points_to_remove)
+    # only remove the alphabetically first letter
+    removed_letter = points_to_remove[0]
+    print("Removing ", removed_letter)
+    total_steps.remove(removed_letter)
+    solved_order += removed_letter
+    # clean up the other requirements since one has been met
+    for k, v in reqs.items():
+        if removed_letter in v:
+            v.remove(removed_letter)
+    points_to_remove.remove(removed_letter)
 
-    # main loop
-    # logic: keep looping over the steps while there are still steps to be set
-    points_to_remove = []
-    while len(total_steps) > 0:
-        print("Looping on ", total_steps)
-        print("Requirements: ", reqs.items())
-        for k, v in reqs.items():
-            # if the requirements are met, the value in the dict will be an empty list
-            if len(v) == 0 and k not in points_to_remove:
-                points_to_remove.append(k)
-        for p in points_to_remove:
-            if p in reqs:
-                reqs.pop(p)
-
-        # remove the first in alph order from the total_steps and add them to the solved_order
-        points_to_remove.sort()
-        print("Eligible for removal ", points_to_remove)
-        # only remove the alphabetically first letter
-        removed_letter = points_to_remove[0]
-        print("Removing ", removed_letter)
-        total_steps.remove(removed_letter)
-        solved_order += removed_letter
-        # clean up the other requirements since one has been met
-        for k, v in reqs.items():
-            if removed_letter in v:
-                v.remove(removed_letter)
-        points_to_remove.remove(removed_letter)
-
-    print(solved_order)
+print(solved_order)
